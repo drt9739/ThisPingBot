@@ -20,6 +20,7 @@ class Bot:
             self.s.send("JOIN #{}\r\n".format(el).encode("utf-8"))
 
         self.chat_message = re.compile(r"^:\w+!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :")
+        self.ppl = ['pooshka', 'pwgood', 'rilaveon', 'dremoavnd', 'drt_s_s']
         self.ping = []
 
     def connect(self, channel):
@@ -122,6 +123,15 @@ class Bot:
                               'user': spisok['user'],
                               'message': spisok['message'],
                               'ping': list(set(self.ping) & set(spisok['message'].lower().split()))}
+
+            elif 'предзаказ' in spisok['message'].lower().split() and spisok['user'] in self.ppl and\
+                    spisok['channel'] == 'pwgood ':
+
+                return True, {'channel': spisok['channel'],
+                              'user': spisok['user'],
+                              'message': spisok['message'],
+                              'ping': ['предзаказ']}
+
             else:
 
                 return False, {}
