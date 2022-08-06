@@ -1,55 +1,43 @@
 import telebot
+import config
+import json
+import requests
 
 from twitch.twitch_listen import Bot
-from config import TOKEN
 
 
 def main():
-    tg_bot = telebot.TeleBot(TOKEN)
-
-    with open('telegram/base.txt') as d:
+    with open('telegram/base.txt', 'r', encoding='utf-8') as d:
         users = eval(d.read())
 
-    all = users['all_channel']
-    twitch_bot = Bot(users['all_channel'])
-    twitch_bot.add_ping(users['all_pings'])
+    bot = Bot(config.PASS, config.NICK, users['all_channel'])
+    bot.add_pings(users['all_pings'])
+    telegram = telebot.TeleBot(config.TOKEN)
 
     while True:
-        with open('telegram/base.txt') as d:
-            users = eval(d.read())
+        flag, message = bot.is_ping()
+        last_id = 0
+        tg_message = requests.get(f'https://api.telegram.org/bot{config.TOKEN}/getUpdates').json()['result'][-1]
+        if '/create' in tg_message['text'] or '/add' in tg_message['text'] or '/add_ping' in tg_message['text'] \
+                and last_id != tg_message['message']['id']:
+            last_id = tg_message['message']['id']
+            with open('telegram/base.txt', 'r', encoding='utf-8') as d:
+                users = eval(d.read())
+            bot.connect(list(set(users['all_channel']) - set(bot.channels)))
+            bot.add_pings(list(set(users['all_pings']) - set(bot.pings)))
 
-        res, spisok = twitch_bot.is_ping()
-
-        if set(users['all_channel']) - set(all):
-            pass
-        print(spisok)
-        if res:
+        if flag:
             send = []
-            if 'предзаказ' in spisok['ping']:
-                for el in users['ppl']:
-                    tg_bot.send_message(el, f'*Возможно наступил предзаказ!!*'
-                                            f' Вот сообщение пользователя *{spisok["user"]}*:'
-                                            f'\n*{spisok["message"]}*', parse_mode='Markdown')
+            for ping in message['ping']:
+                for user_id in users[ping]:
 
+                    if message['channel'] in users['user_id'][str(id)]['channels'] and id not in send:
+                        bot.send(user_id,
+                                 f'Вас упомянул пользователь {message["username"]} в чате {message["channel"]} \n\n'
+                                 f'Вот его сообщение: {message["message"]}')
+                        send.append(user_id)
             else:
-                for el in spisok['ping']:
-
-                    ids = users['ping'][el]
-                    print(ids)
-
-                    for i in ids:
-                        print(i)
-                        if spisok['channel'].split()[0] in users['user_id'][str(i)]['channels'] and i not in send:
-                            print(i)
-                            tg_bot.send_message(i,
-                                                f'Вас упомянул пользователь *{spisok["user"]}* в чате'
-                                                f' *{spisok["channel"]}*\n\n'
-                                                f'Вот его сообщение: '
-                                                f'*{spisok["message"]}*', parse_mode='Markdown')
-                            send.append(i)
-
-                else:
-                    send.clear()
+                send.clear()
 
 
 if __name__ == '__main__':
